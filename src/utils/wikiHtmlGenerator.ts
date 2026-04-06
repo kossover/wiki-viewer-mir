@@ -195,12 +195,57 @@ export const generateHTML = (data: any, logoBase64: string | null) => {
         }
 
         if (b.type === 'image') {
-            return `
-            <div style="margin: 24px 0; text-align: center;">
-                 <img src="${b.content.url}" alt="${b.content.caption || 'Image'}" style="max-width: 100%; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);" />
-                 ${b.content.caption ? `<div style="margin-top: 8px; color: #6b7280; font-size: 0.875rem;">${b.content.caption}</div>` : ''}
-            </div>
-          `;
+            const { url, caption, position, size, width, annotations = [] } = b.content;
+            let sizeClass = 'max-w-md';
+            switch (size) {
+                case 'small': sizeClass = 'max-w-xs'; break;
+                case 'medium': sizeClass = 'max-w-md'; break;
+                case 'large': sizeClass = 'max-w-3xl'; break;
+                case 'full': sizeClass = 'w-full'; break;
+            }
+            if (width) sizeClass = '';
+
+            const containerClass = `margin: 24px 0; display: flex; gap: 24px; align-items: flex-start; ${position === 'left' ? 'flex-direction: row;' : position === 'right' ? 'flex-direction: row-reverse;' : 'flex-direction: column; align-items: center;'}`;
+            const imgStyle = width ? `width: ${width}px;` : '';
+            const isSide = position === 'left' || position === 'right';
+            const imgContainerClass = `position: relative; ${isSide ? 'flex-shrink: 0;' : 'width: 100%; display: flex; justify-content: center;'} ${width ? '' : (size === 'full' ? 'width: 100%;' : size === 'large' ? 'max-width: 48rem;' : size === 'small' ? 'max-width: 20rem;' : 'max-width: 28rem;')}`;
+
+            const captionHtml = caption ? `<div style="color: #4b5563; font-size: 0.875rem; font-weight: 500; background-color: #f9fafb; padding: 12px; border-radius: 8px; border: 1px solid #f3f4f6; ${position === 'above' ? 'margin-bottom: 8px; width: 100%; text-align: center;' : position === 'below' ? 'margin-top: 8px; width: 100%; text-align: center;' : 'flex: 1; align-self: center;'}">${caption}</div>` : '';
+
+            const annotationsHtml = `
+            <svg style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; color: #dc2626; overflow: visible; z-index: 10;">
+                <defs>
+                    <marker id="arrowhead-${b.id}" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                        <polygon points="0 0, 10 3.5, 0 7" fill="currentColor" />
+                    </marker>
+                </defs>
+                ${annotations.map((ann: any) => {
+                if (ann.type === 'arrow') {
+                    return `<line x1="${ann.x}%" y1="${ann.y}%" x2="${ann.x + ann.w}%" y2="${ann.y + ann.h}%" stroke="currentColor" stroke-width="2" marker-end="url(#arrowhead-${b.id})" />`;
+                }
+                if (ann.type === 'rect') {
+                    return `<rect x="${Math.min(ann.x, ann.x + ann.w)}%" y="${Math.min(ann.y, ann.y + ann.h)}%" width="${Math.abs(ann.w)}%" height="${Math.abs(ann.h)}%" fill="none" stroke="currentColor" stroke-width="2" />`;
+                }
+                return '';
+            }).join('')}
+            </svg>
+            ${annotations.map((ann: any) => {
+                if (ann.type === 'text') {
+                    return `<div style="left: ${ann.x}%; top: ${ann.y}%; z-index: 11; position: absolute; color: #dc2626; font-weight: bold; padding: 0 4px; background-color: rgba(255, 255, 255, 0.7); border-radius: 4px; border: 1px solid #fecaca; font-size: 0.875rem; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); pointer-events: none; white-space: nowrap;">${ann.text}</div>`;
+                }
+                return '';
+            }).join('')}`;
+
+            return `<div style="${containerClass}">
+                ${position === 'above' ? captionHtml : ''}
+                <div style="${imgContainerClass} ${imgStyle}">
+                    <div style="position: relative; display: inline-block; width: 100%;">
+                        <img src="${url || ''}" alt="${caption || 'Image'}" style="border-radius: 8px; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); border: 1px solid #e5e7eb; object-fit: contain; width: 100%; height: auto; display: block;" />
+                        ${annotationsHtml}
+                    </div>
+                </div>
+                ${(position === 'below' || isSide) ? captionHtml : ''}
+            </div>`;
         }
 
         if (b.type === 'metrics') {

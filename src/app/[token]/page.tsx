@@ -3,6 +3,9 @@ import { generateHTML } from '@/utils/wikiHtmlGenerator';
 import { notFound } from 'next/navigation';
 import { Metadata } from 'next';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 type Props = {
     params: Promise<{ token: string }>
 };
