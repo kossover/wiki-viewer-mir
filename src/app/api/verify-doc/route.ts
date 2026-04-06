@@ -173,7 +173,7 @@ export async function POST(req: NextRequest) {
                 </svg>
                 ${annotations.map((ann: any) => {
                     if (ann.type === 'text') {
-                        return `<div style="left: ${ann.x}%; top: ${ann.y}%; z-index: 11;" class="absolute transform -translate-x-1/2 -translate-y-1/2 text-red-600 font-bold px-1 bg-white/70 rounded border border-red-200 text-sm shadow-sm pointer-events-none whitespace-nowrap">${ann.text}</div>`;
+                        return `<div style="left: ${ann.x}%; top: ${ann.y}%; z-index: 11;" class="absolute text-red-600 font-bold px-1 bg-white/70 rounded border border-red-200 text-sm shadow-sm pointer-events-none whitespace-nowrap">${ann.text}</div>`;
                     }
                     return '';
                 }).join('')}`;
