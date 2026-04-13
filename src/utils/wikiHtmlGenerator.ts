@@ -258,6 +258,9 @@ export const generateHTML = (data: any, logoBase64: string | null) => {
                 if (ann.type === 'rect') {
                     return `<rect x="${Math.min(ann.x, ann.x + ann.w)}%" y="${Math.min(ann.y, ann.y + ann.h)}%" width="${Math.abs(ann.w)}%" height="${Math.abs(ann.h)}%" fill="none" stroke="currentColor" stroke-width="2" />`;
                 }
+                if (ann.type === 'filledRect') {
+                    return `<rect x="${Math.min(ann.x, ann.x + ann.w)}%" y="${Math.min(ann.y, ann.y + ann.h)}%" width="${Math.abs(ann.w)}%" height="${Math.abs(ann.h)}%" fill="${ann.color || '#0B3F55'}" stroke="none" rx="4" ry="4" />`;
+                }
                 return '';
             }).join('')}
             </svg>
