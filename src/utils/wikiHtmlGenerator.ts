@@ -290,12 +290,34 @@ export const generateHTML = (data: any, logoBase64: string | null) => {
                                     var cvs = document.createElement('canvas');
                                     var w = img.naturalWidth || img.width || 800;
                                     var h = img.naturalHeight || img.height || 600;
-                                    cvs.width = w; cvs.height = h;
-                                    var ctx = cvs.getContext('2d');
-                                    ctx.drawImage(img, 0, 0, w, h);
                                     
+                                    var minX = 0, minY = 0, maxX = w, maxY = h;
+                                    var tCtx = cvs.getContext('2d');
+                                    tCtx.font = "bold 16px sans-serif";
                                     anns.forEach(function(a) {
                                         var x = (a.x/100)*w, y = (a.y/100)*h, aw = (a.w/100)*w, ah = (a.h/100)*h;
+                                        if (a.type === 'text') {
+                                            var tm = tCtx.measureText(a.text).width;
+                                            minX = Math.min(minX, x - 8); maxX = Math.max(maxX, x + tm + 8);
+                                            minY = Math.min(minY, y - 20); maxY = Math.max(maxY, y + 8);
+                                        } else {
+                                            var rx=Math.min(x, x+aw), ry=Math.min(y, y+ah), rw=Math.abs(aw), rh=Math.abs(ah);
+                                            var p = 16;
+                                            minX = Math.min(minX, rx - p); maxX = Math.max(maxX, rx + rw + p);
+                                            minY = Math.min(minY, ry - p); maxY = Math.max(maxY, ry + rh + p);
+                                        }
+                                    });
+                                    
+                                    var newW = maxX - minX;
+                                    var newH = maxY - minY;
+                                    cvs.width = newW; cvs.height = newH;
+                                    var ctx = cvs.getContext('2d');
+                                    ctx.fillStyle = '#ffffff';
+                                    ctx.fillRect(0, 0, newW, newH);
+                                    ctx.drawImage(img, -minX, -minY, w, h);
+                                    
+                                    anns.forEach(function(a) {
+                                        var x = (a.x/100)*w - minX, y = (a.y/100)*h - minY, aw = (a.w/100)*w, ah = (a.h/100)*h;
                                         if (a.type === 'filledRect') {
                                             var rx=Math.min(x, x+aw), ry=Math.min(y, y+ah), rw=Math.abs(aw), rh=Math.abs(ah);
                                             ctx.fillStyle = a.color || '#0B3F55';
