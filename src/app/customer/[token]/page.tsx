@@ -312,7 +312,9 @@ export default async function PublicCustomerWikiPage(props: Props) {
                 </svg>
                 ${annotations.map((ann: any) => {
                     if (ann.type === 'text') {
-                        return `<div class="text-layer-${b.id}" style="left: ${ann.x}%; top: ${ann.y}%; z-index: 11; position: absolute; color: #dc2626; font-weight: bold; padding: 0 4px; background-color: rgba(255, 255, 255, 0.7); border-radius: 4px; border: 1px solid #fecaca; font-size: 0.875rem; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); pointer-events: none; white-space: nowrap;">${ann.text}</div>`;
+                        const textColor = ann.color || '#dc2626';
+                        const borderCol = ann.color ? `${ann.color}66` : '#fecaca';
+                        return `<div class="text-layer-${b.id}" style="left: ${ann.x}%; top: ${ann.y}%; z-index: 11; position: absolute; color: ${textColor}; font-weight: bold; padding: 0 4px; background-color: rgba(255, 255, 255, 0.7); border-radius: 4px; border: 1px solid ${borderCol}; font-size: ${ann.fontSize || 14}px; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); pointer-events: none; white-space: nowrap;">${ann.text}</div>`;
                     }
                     return '';
                 }).join('')}`;
@@ -384,11 +386,13 @@ export default async function PublicCustomerWikiPage(props: Props) {
                                                 ctx.lineTo(ex-12*Math.cos(ang+Math.PI/6), ey-12*Math.sin(ang+Math.PI/6));
                                                 ctx.fill();
                                             } else if (a.type === 'text') {
-                                                ctx.font = "bold 16px sans-serif";
-                                                var tm = ctx.measureText(a.text).width, th = 16, px = 6, py = 4;
-                                                ctx.fillStyle = 'rgba(255,255,255,0.75)'; ctx.strokeStyle = '#fecaca'; ctx.lineWidth = 1.5;
+                                                var fs = a.fontSize || 14;
+                                                ctx.font = "bold " + fs + "px sans-serif";
+                                                var tm = ctx.measureText(a.text).width, th = fs, px = 6, py = 4;
+                                                var tc = a.color || '#dc2626';
+                                                ctx.fillStyle = 'rgba(255,255,255,0.75)'; ctx.strokeStyle = tc + '66'; ctx.lineWidth = 1.5;
                                                 ctx.fillRect(x-px, y-th, tm+px*2, th+py*2); ctx.strokeRect(x-px, y-th, tm+px*2, th+py*2);
-                                                ctx.fillStyle = '#dc2626'; ctx.textBaseline = 'bottom';
+                                                ctx.fillStyle = tc; ctx.textBaseline = 'bottom';
                                                 ctx.fillText(a.text, x, y+py);
                                             }
                                         });
