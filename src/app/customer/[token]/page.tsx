@@ -314,7 +314,8 @@ export default async function PublicCustomerWikiPage(props: Props) {
                     if (ann.type === 'text') {
                         const textColor = ann.color || '#dc2626';
                         const borderCol = ann.color ? `${ann.color}66` : '#fecaca';
-                        return `<div class="text-layer-${b.id}" style="left: ${ann.x}%; top: ${ann.y}%; z-index: 11; position: absolute; color: ${textColor}; font-weight: bold; padding: 0 4px; background-color: rgba(255, 255, 255, 0.7); border-radius: 4px; border: 1px solid ${borderCol}; font-size: ${ann.fontSize || 14}px; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); pointer-events: none; white-space: nowrap;">${ann.text}</div>`;
+                        const borderStyle = ann.showBorder !== false ? `border: 1px solid ${borderCol};` : 'border: none;';
+                        return `<div class="text-layer-${b.id}" style="left: ${ann.x}%; top: ${ann.y}%; z-index: 11; position: absolute; color: ${textColor}; font-weight: bold; padding: 0 4px; background-color: rgba(255, 255, 255, 0.7); border-radius: 4px; ${borderStyle} font-size: ${ann.fontSize || 14}px; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); pointer-events: none; white-space: nowrap;">${ann.text}</div>`;
                     }
                     return '';
                 }).join('')}`;
@@ -344,9 +345,9 @@ export default async function PublicCustomerWikiPage(props: Props) {
                                         anns.forEach(function(a) {
                                             var x = (a.x/100)*w, y = (a.y/100)*h, aw = (a.w/100)*w, ah = (a.h/100)*h;
                                             if (a.type === 'text') {
-                                                var tm = tCtx.measureText(a.text).width;
+                                                var fs = a.fontSize || 14; var tm = tCtx.measureText(a.text).width;
                                                 minX = Math.min(minX, x - 8); maxX = Math.max(maxX, x + tm + 8);
-                                                minY = Math.min(minY, y - 20); maxY = Math.max(maxY, y + 8);
+                                                minY = Math.min(minY, y - 4); maxY = Math.max(maxY, y + fs + 12);
                                             } else {
                                                 var rx=Math.min(x, x+aw), ry=Math.min(y, y+ah), rw=Math.abs(aw), rh=Math.abs(ah);
                                                 var p = 16;
@@ -390,9 +391,10 @@ export default async function PublicCustomerWikiPage(props: Props) {
                                                 ctx.font = "bold " + fs + "px sans-serif";
                                                 var tm = ctx.measureText(a.text).width, th = fs, px = 6, py = 4;
                                                 var tc = a.color || '#dc2626';
-                                                ctx.fillStyle = 'rgba(255,255,255,0.75)'; ctx.strokeStyle = tc + '66'; ctx.lineWidth = 1.5;
-                                                ctx.fillRect(x-px, y-th, tm+px*2, th+py*2); ctx.strokeRect(x-px, y-th, tm+px*2, th+py*2);
-                                                ctx.fillStyle = tc; ctx.textBaseline = 'bottom';
+                                                ctx.fillStyle = 'rgba(255,255,255,0.75)'; ctx.lineWidth = 1.5;
+                                                ctx.fillRect(x-px, y, tm+px*2, th+py*2);
+                                                if (a.showBorder !== false) { ctx.strokeStyle = tc + '66'; ctx.strokeRect(x-px, y, tm+px*2, th+py*2); }
+                                                ctx.fillStyle = tc; ctx.textBaseline = 'top';
                                                 ctx.fillText(a.text, x, y+py);
                                             }
                                         });
