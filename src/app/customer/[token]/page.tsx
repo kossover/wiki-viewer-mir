@@ -68,6 +68,21 @@ async function getSharedCustomerByToken(token: string) {
             }
         }
 
+        // Resolve blocks for any shortcuts
+        for (let i = 0; i < allDocs.length; i++) {
+            if (allDocs[i].isShortcut && allDocs[i].targetDocId) {
+                try {
+                    const targetDoc = await adminDb.collection('wiki_pages').doc(allDocs[i].targetDocId).get();
+                    if (targetDoc.exists) {
+                        const targetData = targetDoc.data();
+                        allDocs[i].blocks = convertTimestamps(targetData?.blocks || []);
+                    }
+                } catch (e) {
+                    console.error('Failed to resolve shortcut for', allDocs[i].id);
+                }
+            }
+        }
+
         const docs = allDocs;
 
         let companyData = null;

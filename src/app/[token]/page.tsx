@@ -36,6 +36,19 @@ async function getSharedPageByToken(token: string) {
 
         const rawPageData = pageDoc.data();
 
+        // Resolve blocks if the document is a shortcut
+        if (rawPageData?.isShortcut && rawPageData.targetDocId) {
+            try {
+                const targetDoc = await adminDb.collection('wiki_pages').doc(rawPageData.targetDocId).get();
+                if (targetDoc.exists) {
+                    const targetData = targetDoc.data();
+                    rawPageData.blocks = targetData?.blocks || [];
+                }
+            } catch (e) {
+                console.error('Failed to resolve shortcut block', e);
+            }
+        }
+
         // Recursively convert timestamps to avoid Next.js serialization issues
         const convertTimestamps = (data: any): any => {
             if (!data) return data;
