@@ -249,7 +249,7 @@ export default async function PublicCustomerWikiPage(props: Props) {
             }
 
             if (b.type === 'image') {
-                const { url, caption, position, size, width, annotations = [] } = b.content;
+                const { url, caption, position, size, width, annotations = [], texts } = b.content;
                 let sizeClass = 'max-w-md';
                 switch (size) {
                     case 'small': sizeClass = 'max-w-xs'; break;
@@ -259,15 +259,39 @@ export default async function PublicCustomerWikiPage(props: Props) {
                 }
                 if (width) sizeClass = '';
 
-                const containerClass = `my-6 flex gap-6 items-start ${position === 'left' ? 'flex-row' : position === 'right' ? 'flex-row-reverse' : 'flex-col items-center'}`;
-                const imgStyle = width ? `width: ${width}px;` : '';
-                const isSide = position === 'left' || position === 'right';
-                const imgContainerClass = `relative ${sizeClass} ${isSide ? 'flex-shrink-0' : 'w-full flex justify-center'}`;
+                const currentTexts = texts !== undefined
+                    ? texts
+                    : (caption ? [{ id: Date.now(), text: caption, type: 'text', position: position || 'below' }] : []);
 
-                const captionHtml = caption ? `<div class="text-gray-600 text-sm font-medium bg-gray-50 p-3 rounded-lg border border-gray-100 ${position === 'above' ? 'mb-2 w-full text-center' : position === 'below' ? 'mt-2 w-full text-center' : 'flex-1 self-center'}">${caption}</div>` : '';
+                const hasLeft = currentTexts.some((t: any) => t.position === 'left');
+                const hasRight = currentTexts.some((t: any) => t.position === 'right');
+                const hasSide = hasLeft || hasRight;
+
+                const renderTextsByPos = (pos: string) => {
+                    const items = currentTexts.filter((t: any) => t.position === pos);
+                    if (items.length === 0) return '';
+                    const isSidePos = pos === 'left' || pos === 'right';
+                    const textsHtml = items.map((t: any) => {
+                        const baseStyle = t.type === 'title'
+                            ? 'font-size: 1.25rem; font-weight: bold; color: #111827; margin-bottom: 4px;'
+                            : 'font-size: 1rem; color: #374151; line-height: 1.5;';
+                        const sideStyle = !isSidePos && t.type !== 'title' ? 'background-color: #f9fafb; padding: 12px; border-radius: 8px;' : '';
+                        const alignStyle = !isSidePos && t.type === 'title' ? 'text-align: center;' : '';
+                        const titleSideStyle = isSidePos && t.type === 'title' ? 'color: #1e3a8a; margin-bottom: 8px;' : '';
+                        return `<div style="${baseStyle} ${sideStyle} ${alignStyle} ${titleSideStyle} white-space: pre-wrap;">${t.text}</div>`;
+                    }).join('');
+                    const containerStyle = isSidePos
+                        ? 'flex: 1; align-self: stretch; display: flex; flex-direction: column; justify-content: center; background-color: rgba(249, 250, 251, 0.5); padding: 24px; border-radius: 12px; border: 1px solid #f3f4f6; min-width: 200px; gap: 12px;'
+                        : 'width: 100%; margin: 16px 0; display: flex; flex-direction: column; gap: 12px; text-align: center;';
+                    return `<div style="${containerStyle}">${textsHtml}</div>`;
+                };
+
+                const imgStyle = width ? `width: ${width}px;` : '';
+                const imgContainerClass = `position: relative; ${hasSide ? 'flex-shrink: 0;' : 'width: 100%; display: flex; justify-content: center;'} ${width ? '' : (size === 'full' ? 'width: 100%;' : size === 'large' ? 'max-width: 48rem;' : size === 'small' ? 'max-width: 20rem;' : 'max-width: 28rem;')}`;
+                const flexRowDirection = `display: flex; width: 100%; align-items: flex-start; gap: 32px; flex-direction: row; flex-wrap: wrap; justify-content: ${hasSide ? 'space-between' : 'center'};`;
 
                 const annotationsHtml = `
-                <svg class="absolute top-0 left-0 w-full h-full pointer-events-none text-red-600 overflow-visible" style="z-index: 10;">
+                <svg style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; color: #dc2626; overflow: visible; z-index: 10;">
                     <defs>
                         <marker id="arrowhead-${b.id}" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
                             <polygon points="0 0, 10 3.5, 0 7" fill="currentColor" />
@@ -275,30 +299,39 @@ export default async function PublicCustomerWikiPage(props: Props) {
                     </defs>
                     ${annotations.map((ann: any) => {
                     if (ann.type === 'arrow') {
-                        return `<line x1="${ann.x}%" y1="${ann.y}%" x2="${ann.x + ann.w}%" y2="${ann.y + ann.h}%" stroke="currentColor" stroke-width="2" marker-end="url(#arrowhead-${b.id})" />`;
+                        return `<line x1="${ann.x}%" y1="${ann.y}%" x2="${ann.x + ann.w}%" y2="${ann.y + ann.h}%" stroke="${ann.color || 'currentColor'}" stroke-width="2" marker-end="url(#arrowhead-${b.id})" />`;
                     }
                     if (ann.type === 'rect') {
-                        return `<rect x="${Math.min(ann.x, ann.x + ann.w)}%" y="${Math.min(ann.y, ann.y + ann.h)}%" width="${Math.abs(ann.w)}%" height="${Math.abs(ann.h)}%" fill="none" stroke="currentColor" stroke-width="2" />`;
+                        return `<rect x="${Math.min(ann.x, ann.x + ann.w)}%" y="${Math.min(ann.y, ann.y + ann.h)}%" width="${Math.abs(ann.w)}%" height="${Math.abs(ann.h)}%" fill="none" stroke="${ann.color || 'currentColor'}" stroke-width="2" />`;
+                    }
+                    if (ann.type === 'filledRect') {
+                        return `<rect x="${Math.min(ann.x, ann.x + ann.w)}%" y="${Math.min(ann.y, ann.y + ann.h)}%" width="${Math.abs(ann.w)}%" height="${Math.abs(ann.h)}%" fill="${ann.color || '#0B3F55'}" stroke="none" rx="4" ry="4" />`;
                     }
                     return '';
                 }).join('')}
                 </svg>
                 ${annotations.map((ann: any) => {
                     if (ann.type === 'text') {
-                        return `<div style="left: ${ann.x}%; top: ${ann.y}%; z-index: 11;" class="absolute text-red-600 font-bold px-1 bg-white/70 rounded border border-red-200 text-sm shadow-sm pointer-events-none whitespace-nowrap">${ann.text}</div>`;
+                        return `<div style="left: ${ann.x}%; top: ${ann.y}%; z-index: 11; position: absolute; color: #dc2626; font-weight: bold; padding: 0 4px; background-color: rgba(255, 255, 255, 0.7); border-radius: 4px; border: 1px solid #fecaca; font-size: 0.875rem; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); pointer-events: none; white-space: nowrap;">${ann.text}</div>`;
                     }
                     return '';
                 }).join('')}`;
 
-                return `<div class="${containerClass}">
-                    ${position === 'above' ? captionHtml : ''}
-                    <div class="${imgContainerClass}" style="${imgStyle}">
-                        <div class="relative inline-block w-full">
-                            <img src="${url || ''}" alt="${caption || ''}" class="rounded-lg shadow-sm border border-gray-200 object-contain w-full h-auto block" />
-                            ${annotationsHtml}
+                return `<div style="margin: 32px 0; display: flex; flex-direction: column; align-items: center; width: 100%;" dir="rtl">
+                    ${renderTextsByPos('above')}
+                    <div style="${flexRowDirection}">
+                        ${renderTextsByPos('right')}
+                        <div style="${imgContainerClass} ${imgStyle}">
+                            ${url ? `
+                            <div style="position: relative; display: inline-block; width: 100%;">
+                                <img src="${url}" alt="Wiki Image" style="border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); border: 1px solid #e5e7eb; object-fit: contain; width: 100%; height: auto; display: block;" />
+                                ${annotationsHtml}
+                            </div>
+                            ` : `<div style="background-color: #f3f4f6; height: 12rem; width: 100%; display: flex; align-items: center; justify-content: center; color: #9ca3af; border-radius: 12px; border: 1px solid #e5e7eb;">אין תמונה להצגה</div>`}
                         </div>
+                        ${renderTextsByPos('left')}
                     </div>
-                    ${(position === 'below' || isSide) ? captionHtml : ''}
+                    ${renderTextsByPos('below')}
                 </div>`;
             }
 
