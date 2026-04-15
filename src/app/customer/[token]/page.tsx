@@ -291,7 +291,7 @@ export default async function PublicCustomerWikiPage(props: Props) {
                 const flexRowDirection = `display: flex; width: 100%; align-items: flex-start; gap: 32px; flex-direction: row; flex-wrap: wrap; justify-content: ${hasSide ? 'space-between' : 'center'};`;
 
                 const annotationsHtml = `
-                <svg style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; color: #dc2626; overflow: visible; z-index: 10;">
+                <svg id="svg-layer-${b.id}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; color: #dc2626; overflow: visible; z-index: 10;">
                     <defs>
                         <marker id="arrowhead-${b.id}" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
                             <polygon points="0 0, 10 3.5, 0 7" fill="currentColor" />
@@ -312,7 +312,7 @@ export default async function PublicCustomerWikiPage(props: Props) {
                 </svg>
                 ${annotations.map((ann: any) => {
                     if (ann.type === 'text') {
-                        return `<div style="left: ${ann.x}%; top: ${ann.y}%; z-index: 11; position: absolute; color: #dc2626; font-weight: bold; padding: 0 4px; background-color: rgba(255, 255, 255, 0.7); border-radius: 4px; border: 1px solid #fecaca; font-size: 0.875rem; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); pointer-events: none; white-space: nowrap;">${ann.text}</div>`;
+                        return `<div class="text-layer-${b.id}" style="left: ${ann.x}%; top: ${ann.y}%; z-index: 11; position: absolute; color: #dc2626; font-weight: bold; padding: 0 4px; background-color: rgba(255, 255, 255, 0.7); border-radius: 4px; border: 1px solid #fecaca; font-size: 0.875rem; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); pointer-events: none; white-space: nowrap;">${ann.text}</div>`;
                     }
                     return '';
                 }).join('')}`;
@@ -324,8 +324,85 @@ export default async function PublicCustomerWikiPage(props: Props) {
                         <div style="${imgContainerClass} ${imgStyle}">
                             ${url ? `
                             <div style="position: relative; display: inline-block; width: 100%;">
-                                <img src="${url}" alt="Wiki Image" style="border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); border: 1px solid #e5e7eb; object-fit: contain; width: 100%; height: auto; display: block;" />
+                                <img id="wiki-img-${b.id}" src="${url}" alt="Wiki Image" style="border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); border: 1px solid #e5e7eb; object-fit: contain; width: 100%; height: auto; display: block;" />
                                 ${annotationsHtml}
+                                ${annotations && annotations.length > 0 ? `
+                                <script>
+                                window.addEventListener('load', function() {
+                                    var img = document.getElementById('wiki-img-${b.id}');
+                                    if (!img) return;
+                                    var anns = JSON.parse(decodeURIComponent("${encodeURIComponent(JSON.stringify(annotations))}"));
+                                    var draw = function() {
+                                        var cvs = document.createElement('canvas');
+                                        var w = img.naturalWidth || img.width || 800;
+                                        var h = img.naturalHeight || img.height || 600;
+                                        var minX = 0, minY = 0, maxX = w, maxY = h;
+                                        var tCtx = cvs.getContext('2d');
+                                        tCtx.font = "bold 16px sans-serif";
+                                        anns.forEach(function(a) {
+                                            var x = (a.x/100)*w, y = (a.y/100)*h, aw = (a.w/100)*w, ah = (a.h/100)*h;
+                                            if (a.type === 'text') {
+                                                var tm = tCtx.measureText(a.text).width;
+                                                minX = Math.min(minX, x - 8); maxX = Math.max(maxX, x + tm + 8);
+                                                minY = Math.min(minY, y - 20); maxY = Math.max(maxY, y + 8);
+                                            } else {
+                                                var rx=Math.min(x, x+aw), ry=Math.min(y, y+ah), rw=Math.abs(aw), rh=Math.abs(ah);
+                                                var p = 16;
+                                                minX = Math.min(minX, rx - p); maxX = Math.max(maxX, rx + rw + p);
+                                                minY = Math.min(minY, ry - p); maxY = Math.max(maxY, ry + rh + p);
+                                            }
+                                        });
+                                        var newW = maxX - minX;
+                                        var newH = maxY - minY;
+                                        cvs.width = newW; cvs.height = newH;
+                                        var ctx = cvs.getContext('2d');
+                                        ctx.fillStyle = '#ffffff';
+                                        ctx.fillRect(0, 0, newW, newH);
+                                        ctx.drawImage(img, -minX, -minY, w, h);
+                                        anns.forEach(function(a) {
+                                            var x = (a.x/100)*w - minX, y = (a.y/100)*h - minY, aw = (a.w/100)*w, ah = (a.h/100)*h;
+                                            if (a.type === 'filledRect') {
+                                                var rx=Math.min(x, x+aw), ry=Math.min(y, y+ah), rw=Math.abs(aw), rh=Math.abs(ah);
+                                                ctx.fillStyle = a.color || '#0B3F55';
+                                                var r = 4; ctx.beginPath();
+                                                ctx.moveTo(rx+r, ry); ctx.lineTo(rx+rw-r, ry); ctx.quadraticCurveTo(rx+rw, ry, rx+rw, ry+r);
+                                                ctx.lineTo(rx+rw, ry+rh-r); ctx.quadraticCurveTo(rx+rw, ry+rh, rx+rw-r, ry+rh);
+                                                ctx.lineTo(rx+r, ry+rh); ctx.quadraticCurveTo(rx, ry+rh, rx, ry+rh-r);
+                                                ctx.lineTo(rx, ry+r); ctx.quadraticCurveTo(rx, ry, rx+r, ry);
+                                                ctx.fill();
+                                            } else if (a.type === 'rect') {
+                                                var rx=Math.min(x, x+aw), ry=Math.min(y, y+ah), rw=Math.abs(aw), rh=Math.abs(ah);
+                                                ctx.strokeStyle = a.color || '#dc2626'; ctx.lineWidth = 3;
+                                                ctx.strokeRect(rx, ry, rw, rh);
+                                            } else if (a.type === 'arrow') {
+                                                var ex = x+aw, ey = y+ah;
+                                                ctx.strokeStyle = a.color || '#dc2626'; ctx.fillStyle = a.color || '#dc2626'; ctx.lineWidth = 3;
+                                                ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(ex, ey); ctx.stroke();
+                                                var ang = Math.atan2(ey-y, ex-x);
+                                                ctx.beginPath(); ctx.moveTo(ex, ey);
+                                                ctx.lineTo(ex-12*Math.cos(ang-Math.PI/6), ey-12*Math.sin(ang-Math.PI/6));
+                                                ctx.lineTo(ex-12*Math.cos(ang+Math.PI/6), ey-12*Math.sin(ang+Math.PI/6));
+                                                ctx.fill();
+                                            } else if (a.type === 'text') {
+                                                ctx.font = "bold 16px sans-serif";
+                                                var tm = ctx.measureText(a.text).width, th = 16, px = 6, py = 4;
+                                                ctx.fillStyle = 'rgba(255,255,255,0.75)'; ctx.strokeStyle = '#fecaca'; ctx.lineWidth = 1.5;
+                                                ctx.fillRect(x-px, y-th, tm+px*2, th+py*2); ctx.strokeRect(x-px, y-th, tm+px*2, th+py*2);
+                                                ctx.fillStyle = '#dc2626'; ctx.textBaseline = 'bottom';
+                                                ctx.fillText(a.text, x, y+py);
+                                            }
+                                        });
+                                        try {
+                                            img.src = cvs.toDataURL('image/jpeg', 0.95);
+                                            var svgL = document.getElementById('svg-layer-${b.id}');
+                                            if (svgL) svgL.style.display = 'none';
+                                            Array.from(document.querySelectorAll('.text-layer-${b.id}')).forEach(function(e){ e.style.display='none'; });
+                                        } catch(e) {}
+                                    };
+                                    if (img.complete) draw(); else img.onload = draw;
+                                });
+                                </script>
+                                ` : ''}
                             </div>
                             ` : `<div style="background-color: #f3f4f6; height: 12rem; width: 100%; display: flex; align-items: center; justify-content: center; color: #9ca3af; border-radius: 12px; border: 1px solid #e5e7eb;">אין תמונה להצגה</div>`}
                         </div>
